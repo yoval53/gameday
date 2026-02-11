@@ -35,9 +35,23 @@ function chooseCombat(payload) {
   const actions = [];
   let resources = Number(me.resources) || 0;
   const myLevel = Number(me.level) || 1;
+  const myLife = Number(me.hp) || 0;
+  const myDefense = Number(me.defense ?? me.armor ?? 0) || 0;
 
-  // Invest 7% of resources in defense every turn.
-  const armorAmount = Math.floor(resources * 0.07);
+  // Invest in defense until life + defense matches combined enemy income.
+  const totalEnemyIncome = enemies.reduce((sum, enemy) => {
+    const enemyIncome = Number(
+      enemy.income
+      ?? enemy.passiveIncome
+      ?? enemy.goldPerTurn
+      ?? enemy.resourceIncome,
+    ) || 0;
+
+    return sum + enemyIncome;
+  }, 0);
+
+  const defenseGap = Math.max(0, totalEnemyIncome - (myLife + myDefense));
+  const armorAmount = Math.min(resources, defenseGap);
   if (armorAmount > 0) {
     actions.push({ type: 'armor', amount: armorAmount });
     resources -= armorAmount;
@@ -97,8 +111,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'upgrade-when-affordable-defend-7pct-attack-at-1.1x-enemy-hp-plus-defense',
-    version: '1.4',
+    strategy: 'defend-until-life-plus-defense-reaches-total-enemy-income-upgrade-when-affordable-attack-at-1.1x-enemy-hp-plus-defense',
+    version: '1.5',
   });
 });
 
