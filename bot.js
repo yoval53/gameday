@@ -46,7 +46,10 @@ function chooseCombat(payload) {
   // After completing both upgrades, switch to fixed investment mode.
   if (!canUpgradeTower(myLevel) && resources > 0) {
     if (enemies.length > 1) {
-      actions.push({ type: 'armor', amount: resources });
+      const defenseInvestment = Math.floor(resources / 2);
+      if (defenseInvestment > 0) {
+        actions.push({ type: 'armor', amount: defenseInvestment });
+      }
       return actions;
     }
 
@@ -80,10 +83,13 @@ function chooseCombat(payload) {
   const totalEnemyIncome = enemyIncomes.reduce((sum, income) => sum + income, 0);
 
   // If enemies have stronger combined economy than our life + defense,
-  // invest every available resource into defense.
+  // invest half of available resources into defense and keep the rest for later.
   if (totalEnemyIncome > (myLife + myDefense) && resources > 0) {
-    actions.push({ type: 'armor', amount: resources });
-    resources = 0;
+    const defenseInvestment = Math.floor(resources / 2);
+    if (defenseInvestment > 0) {
+      actions.push({ type: 'armor', amount: defenseInvestment });
+      resources -= defenseInvestment;
+    }
   }
 
   // Keep upgrading whenever we can afford the next level, up to two upgrades.
@@ -142,7 +148,7 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'upgrade-up-to-two-times-then-invest-all-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-economy-defense-and-multi-target-attack-logic',
+    strategy: 'upgrade-up-to-two-times-then-invest-half-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-half-for-economy-defense-and-multi-target-attack-logic',
     version: '2.0',
   });
 });
