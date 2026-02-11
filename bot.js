@@ -4,7 +4,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const PORT = Number(process.env.PORT || 3000);
 
 const app = express();
-const MAX_UPGRADE_COUNT = 3;
+const MAX_UPGRADE_COUNT = 2;
 
 function logRequest() {
   console.log('[KW-BOT] Mega ogudor');
