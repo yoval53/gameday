@@ -43,6 +43,34 @@ function chooseCombat(payload) {
   const myLife = Number(me.hp) || 0;
   const myDefense = Number(me.defense ?? me.armor ?? 0) || 0;
 
+  // After completing both upgrades, switch to fixed investment mode.
+  if (!canUpgradeTower(myLevel) && resources > 0) {
+    if (enemies.length > 1) {
+      actions.push({ type: 'armor', amount: resources });
+      return actions;
+    }
+
+    const targetEnemy = enemies[enemies.length - 1];
+    if (targetEnemy?.playerId) {
+      const defenseInvestment = Math.floor(resources / 2);
+      const attackInvestment = resources - defenseInvestment;
+
+      if (defenseInvestment > 0) {
+        actions.push({ type: 'armor', amount: defenseInvestment });
+      }
+
+      if (attackInvestment > 0) {
+        actions.push({
+          type: 'attack',
+          targetId: targetEnemy.playerId,
+          troopCount: attackInvestment,
+        });
+      }
+
+      return actions;
+    }
+  }
+
   const enemyIncomes = enemies.map((enemy) => Number(
     enemy.income
     ?? enemy.passiveIncome
@@ -114,8 +142,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'invest-all-in-defense-when-total-enemy-income-exceeds-my-hp-plus-defense-upgrade-when-affordable-up-to-two-times-attack-at-1.1x-enemy-hp-plus-defense',
-    version: '1.9',
+    strategy: 'upgrade-up-to-two-times-then-invest-all-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-economy-defense-and-multi-target-attack-logic',
+    version: '2.0',
   });
 });
 
