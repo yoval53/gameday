@@ -42,6 +42,12 @@ function chooseCombat(payload) {
   const myLevel = Number(me.level) || 1;
   const myLife = Number(me.hp) || 0;
   const myDefense = Number(me.defense ?? me.armor ?? 0) || 0;
+  const myIncome = Number(
+    me.income
+    ?? me.passiveIncome
+    ?? me.goldPerTurn
+    ?? me.resourceIncome,
+  ) || 0;
   const turnNumber = Number(
     payload.turn
     ?? payload.turnNumber
@@ -106,6 +112,16 @@ function chooseCombat(payload) {
 
   // Keep upgrading whenever we can afford the next level, up to three upgrades.
   const upgradeCost = costToUpgrade(myLevel);
+
+  // While saving for an upgrade, if life is low, invest half income into defense.
+  if (canUpgradeTower(myLevel) && resources < upgradeCost && myLife < 100 && resources > 0) {
+    const defenseInvestment = Math.min(resources, Math.floor(myIncome / 2));
+    if (defenseInvestment > 0) {
+      actions.push({ type: 'armor', amount: defenseInvestment });
+      resources -= defenseInvestment;
+    }
+  }
+
   if (canUpgradeTower(myLevel) && resources >= upgradeCost) {
     actions.push({ type: 'upgrade' });
     resources -= upgradeCost;
@@ -160,8 +176,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'from-turn-25-invest-all-in-defense-before-then-upgrade-up-to-three-times-then-invest-half-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-half-for-economy-defense-and-multi-target-attack-logic',
-    version: '2.1',
+    strategy: 'from-turn-25-invest-all-in-defense-before-then-upgrade-up-to-three-times-while-saving-and-low-life-invest-half-income-in-defense-then-invest-half-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-half-for-economy-defense-and-multi-target-attack-logic',
+    version: '2.2',
   });
 });
 
