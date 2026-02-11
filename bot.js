@@ -36,33 +36,15 @@ function chooseCombat(payload) {
   let resources = Number(me.resources) || 0;
   const myLevel = Number(me.level) || 1;
 
-  // Phase 1: Peace always, defend, and save for tower level 2.
-  if (myLevel < 2) {
-    const declaredAttackers = new Set(
-      (payload.previousAttacks || [])
-        .filter((attack) => attack?.action?.targetId === me.playerId)
-        .map((attack) => attack?.playerId || attack?.attackerId || attack?.action?.playerId)
-        .filter(Boolean),
-    );
-
-    const defendAmount = declaredAttackers.size * 8;
-    const armorAmount = Math.min(resources, defendAmount);
-
-    if (armorAmount > 0) {
-      actions.push({ type: 'armor', amount: armorAmount });
-      resources -= armorAmount;
-    }
-
-    const upgradeCost = costToUpgrade(myLevel);
-    if (resources >= upgradeCost) {
-      actions.push({ type: 'upgrade' });
-    }
-
-    return actions;
+  // Invest 5% of resources in defense every turn.
+  const armorAmount = Math.floor(resources * 0.05);
+  if (armorAmount > 0) {
+    actions.push({ type: 'armor', amount: armorAmount });
+    resources -= armorAmount;
   }
 
-  // Upgrade to tower level 3 as soon as we can afford it.
-  if (myLevel < 3) {
+  // Upgrade up to tower level 4 as soon as we can afford it.
+  if (myLevel < 4) {
     const upgradeCost = costToUpgrade(myLevel);
     if (resources >= upgradeCost) {
       actions.push({ type: 'upgrade' });
@@ -70,14 +52,14 @@ function chooseCombat(payload) {
     }
   }
 
-  // Start attacking when we can overpower all enemies this turn.
+  // Start attacking when resources exceed 1.2x total enemy health.
   const enemyLifeByPlayer = enemies.map((enemy) => ({
     playerId: enemy.playerId,
-    life: (Number(enemy.hp) || 0) + (Number(enemy.armor) || 0),
+    life: Number(enemy.hp) || 0,
   }));
   const totalEnemyLife = enemyLifeByPlayer.reduce((sum, enemy) => sum + enemy.life, 0);
 
-  if (resources > totalEnemyLife && resources > 0) {
+  if (resources > (1.2 * totalEnemyLife) && resources > 0) {
     let remainingTroops = resources;
 
     enemyLifeByPlayer
@@ -115,8 +97,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'upgrade-to-3-then-overpower-total-life',
-    version: '1.2',
+    strategy: 'upgrade-to-4-defend-5pct-attack-at-1.2x-enemy-hp',
+    version: '1.3',
   });
 });
 
