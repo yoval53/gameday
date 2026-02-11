@@ -65,11 +65,13 @@ function chooseCombat(payload) {
   }
 
   // Start attacking when resources exceed 1.1x enemy health + defense.
-  const enemyLifeByPlayer = enemies.map((enemy) => ({
-    playerId: enemy.playerId,
-    life: Number(enemy.hp) || 0,
-    defense: Number(enemy.defense ?? enemy.armor ?? 0) || 0,
-  }));
+  const enemyLifeByPlayer = enemies
+    .map((enemy) => ({
+      playerId: enemy.playerId,
+      life: Number(enemy.hp) || 0,
+      defense: Number(enemy.defense ?? enemy.armor ?? 0) || 0,
+    }))
+    .filter((enemy) => enemy.life > 0);
   const totalEnemyLifeAndDefense = enemyLifeByPlayer
     .reduce((sum, enemy) => sum + enemy.life + enemy.defense, 0);
 
