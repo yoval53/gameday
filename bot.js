@@ -57,21 +57,42 @@ function chooseCombat(payload) {
     return actions;
   }
 
-  // Phase 2: Keep saving while more than one opponent is still alive.
-  if (enemies.length > 1) {
-    return actions;
+  // Upgrade to tower level 3 as soon as we can afford it.
+  if (myLevel < 3) {
+    const upgradeCost = costToUpgrade(myLevel);
+    if (resources >= upgradeCost) {
+      actions.push({ type: 'upgrade' });
+      resources -= upgradeCost;
+    }
   }
 
-  // One player left: attack only when our money is more than their life.
-  const lastEnemy = enemies[0];
-  const lastEnemyLife = (Number(lastEnemy.hp) || 0) + (Number(lastEnemy.armor) || 0);
+  // Start attacking when we can overpower all enemies this turn.
+  const enemyLifeByPlayer = enemies.map((enemy) => ({
+    playerId: enemy.playerId,
+    life: (Number(enemy.hp) || 0) + (Number(enemy.armor) || 0),
+  }));
+  const totalEnemyLife = enemyLifeByPlayer.reduce((sum, enemy) => sum + enemy.life, 0);
 
-  if (resources > lastEnemyLife && resources > 0) {
-    actions.push({
-      type: 'attack',
-      targetId: lastEnemy.playerId,
-      troopCount: resources,
-    });
+  if (resources > totalEnemyLife && resources > 0) {
+    let remainingTroops = resources;
+
+    enemyLifeByPlayer
+      .sort((a, b) => a.life - b.life)
+      .forEach((enemy) => {
+        if (remainingTroops <= 0) {
+          return;
+        }
+
+        const troopsToSend = Math.min(remainingTroops, enemy.life + 1);
+        if (troopsToSend > 0) {
+          actions.push({
+            type: 'attack',
+            targetId: enemy.playerId,
+            troopCount: troopsToSend,
+          });
+          remainingTroops -= troopsToSend;
+        }
+      });
   }
 
   return actions;
@@ -90,8 +111,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'two-phase-peace-then-finish',
-    version: '1.1',
+    strategy: 'upgrade-to-3-then-overpower-total-life',
+    version: '1.2',
   });
 });
 
