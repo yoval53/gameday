@@ -36,30 +36,30 @@ function chooseCombat(payload) {
   let resources = Number(me.resources) || 0;
   const myLevel = Number(me.level) || 1;
 
-  // Invest 5% of resources in defense every turn.
-  const armorAmount = Math.floor(resources * 0.05);
+  // Invest 7% of resources in defense every turn.
+  const armorAmount = Math.floor(resources * 0.07);
   if (armorAmount > 0) {
     actions.push({ type: 'armor', amount: armorAmount });
     resources -= armorAmount;
   }
 
-  // Upgrade up to tower level 4 as soon as we can afford it.
-  if (myLevel < 4) {
-    const upgradeCost = costToUpgrade(myLevel);
-    if (resources >= upgradeCost) {
-      actions.push({ type: 'upgrade' });
-      resources -= upgradeCost;
-    }
+  // Keep upgrading whenever we can afford the next level.
+  const upgradeCost = costToUpgrade(myLevel);
+  if (resources >= upgradeCost) {
+    actions.push({ type: 'upgrade' });
+    resources -= upgradeCost;
   }
 
-  // Start attacking when resources exceed 1.2x total enemy health.
+  // Start attacking when resources exceed 1.1x enemy health + defense.
   const enemyLifeByPlayer = enemies.map((enemy) => ({
     playerId: enemy.playerId,
     life: Number(enemy.hp) || 0,
+    defense: Number(enemy.defense ?? enemy.armor ?? 0) || 0,
   }));
-  const totalEnemyLife = enemyLifeByPlayer.reduce((sum, enemy) => sum + enemy.life, 0);
+  const totalEnemyLifeAndDefense = enemyLifeByPlayer
+    .reduce((sum, enemy) => sum + enemy.life + enemy.defense, 0);
 
-  if (resources > (1.2 * totalEnemyLife) && resources > 0) {
+  if (resources > (1.1 * totalEnemyLifeAndDefense) && resources > 0) {
     let remainingTroops = resources;
 
     enemyLifeByPlayer
@@ -97,8 +97,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'upgrade-to-4-defend-5pct-attack-at-1.2x-enemy-hp',
-    version: '1.3',
+    strategy: 'upgrade-when-affordable-defend-7pct-attack-at-1.1x-enemy-hp-plus-defense',
+    version: '1.4',
   });
 });
 
