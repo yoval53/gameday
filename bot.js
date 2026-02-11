@@ -4,7 +4,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const PORT = Number(process.env.PORT || 3000);
 
 const app = express();
-const MAX_UPGRADE_COUNT = 2;
+const MAX_UPGRADE_COUNT = 3;
 
 function logRequest() {
   console.log('[KW-BOT] Mega ogudor');
@@ -43,7 +43,7 @@ function chooseCombat(payload) {
   const myLife = Number(me.hp) || 0;
   const myDefense = Number(me.defense ?? me.armor ?? 0) || 0;
 
-  // After completing both upgrades, switch to fixed investment mode.
+  // After completing all upgrades, switch to fixed investment mode.
   if (!canUpgradeTower(myLevel) && resources > 0) {
     if (enemies.length > 1) {
       const defenseInvestment = Math.floor(resources / 2);
@@ -92,7 +92,7 @@ function chooseCombat(payload) {
     }
   }
 
-  // Keep upgrading whenever we can afford the next level, up to two upgrades.
+  // Keep upgrading whenever we can afford the next level, up to three upgrades.
   const upgradeCost = costToUpgrade(myLevel);
   if (canUpgradeTower(myLevel) && resources >= upgradeCost) {
     actions.push({ type: 'upgrade' });
@@ -148,7 +148,7 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'upgrade-up-to-two-times-then-invest-half-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-half-for-economy-defense-and-multi-target-attack-logic',
+    strategy: 'upgrade-up-to-three-times-then-invest-half-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-half-for-economy-defense-and-multi-target-attack-logic',
     version: '2.0',
   });
 });
