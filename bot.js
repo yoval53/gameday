@@ -55,6 +55,15 @@ function chooseCombat(payload) {
     ?? payload.roundNumber,
   ) || 0;
 
+  // First priority: if life is below 100, invest half income into defense.
+  if (myLife < 100 && resources > 0 && myIncome > 0 && turnNumber < 25) {
+    const defenseInvestment = Math.min(resources, Math.floor(myIncome / 2));
+    if (defenseInvestment > 0) {
+      actions.push({ type: 'armor', amount: defenseInvestment });
+      resources -= defenseInvestment;
+    }
+  }
+
   // From turn 25 onward, commit all available resources to defense.
   if (turnNumber >= 25 && resources > 0) {
     actions.push({ type: 'armor', amount: resources });
@@ -112,15 +121,6 @@ function chooseCombat(payload) {
 
   // Keep upgrading whenever we can afford the next level, up to three upgrades.
   const upgradeCost = costToUpgrade(myLevel);
-
-  // While saving for an upgrade, if life is low, invest half income into defense.
-  if (canUpgradeTower(myLevel) && resources < upgradeCost && myLife < 100 && resources > 0) {
-    const defenseInvestment = Math.min(resources, Math.floor(myIncome / 2));
-    if (defenseInvestment > 0) {
-      actions.push({ type: 'armor', amount: defenseInvestment });
-      resources -= defenseInvestment;
-    }
-  }
 
   if (canUpgradeTower(myLevel) && resources >= upgradeCost) {
     actions.push({ type: 'upgrade' });
