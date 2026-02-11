@@ -38,13 +38,6 @@ function chooseCombat(payload) {
   const myLife = Number(me.hp) || 0;
   const myDefense = Number(me.defense ?? me.armor ?? 0) || 0;
 
-  // Only invest in defense if our life is the minimum among all players.
-  const lowestEnemyLife = enemies.reduce((minLife, enemy) => {
-    const enemyLife = Number(enemy.hp) || 0;
-    return Math.min(minLife, enemyLife);
-  }, Number.POSITIVE_INFINITY);
-  const hasMinimumLife = myLife <= lowestEnemyLife;
-
   const enemyIncomes = enemies.map((enemy) => Number(
     enemy.income
     ?? enemy.passiveIncome
@@ -53,24 +46,11 @@ function chooseCombat(payload) {
   ) || 0);
   const totalEnemyIncome = enemyIncomes.reduce((sum, income) => sum + income, 0);
 
-  // If only one enemy is left, always invest in defense to reach enemy income + 5.
-  if (enemies.length === 1) {
-    const defenseTarget = enemyIncomes[0] + 5;
-    const defenseGap = Math.max(0, defenseTarget - (myLife + myDefense));
-    const armorAmount = Math.min(resources, defenseGap);
-    if (armorAmount > 0) {
-      actions.push({ type: 'armor', amount: armorAmount });
-      resources -= armorAmount;
-    }
-  } else if (hasMinimumLife) {
-    // Otherwise, only invest in defense when we have minimum life,
-    // until life + defense matches combined enemy income.
-    const defenseGap = Math.max(0, totalEnemyIncome - (myLife + myDefense));
-    const armorAmount = Math.min(resources, defenseGap);
-    if (armorAmount > 0) {
-      actions.push({ type: 'armor', amount: armorAmount });
-      resources -= armorAmount;
-    }
+  // If enemies have stronger combined economy than our life + defense,
+  // invest every available resource into defense.
+  if (totalEnemyIncome > (myLife + myDefense) && resources > 0) {
+    actions.push({ type: 'armor', amount: resources });
+    resources = 0;
   }
 
   // Keep upgrading whenever we can afford the next level.
@@ -129,8 +109,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'defend-when-my-life-is-minimum-to-total-enemy-income-or-always-defend-vs-one-enemy-to-income-plus-5-upgrade-when-affordable-attack-at-1.1x-enemy-hp-plus-defense',
-    version: '1.7',
+    strategy: 'invest-all-in-defense-when-total-enemy-income-exceeds-my-hp-plus-defense-upgrade-when-affordable-attack-at-1.1x-enemy-hp-plus-defense',
+    version: '1.8',
   });
 });
 
