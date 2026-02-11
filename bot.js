@@ -42,6 +42,18 @@ function chooseCombat(payload) {
   const myLevel = Number(me.level) || 1;
   const myLife = Number(me.hp) || 0;
   const myDefense = Number(me.defense ?? me.armor ?? 0) || 0;
+  const turnNumber = Number(
+    payload.turn
+    ?? payload.turnNumber
+    ?? payload.round
+    ?? payload.roundNumber,
+  ) || 0;
+
+  // From turn 25 onward, commit all available resources to defense.
+  if (turnNumber >= 25 && resources > 0) {
+    actions.push({ type: 'armor', amount: resources });
+    return actions;
+  }
 
   // After completing all upgrades, switch to fixed investment mode.
   if (!canUpgradeTower(myLevel) && resources > 0) {
@@ -148,8 +160,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'upgrade-up-to-three-times-then-invest-half-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-half-for-economy-defense-and-multi-target-attack-logic',
-    version: '2.0',
+    strategy: 'from-turn-25-invest-all-in-defense-before-then-upgrade-up-to-three-times-then-invest-half-in-defense-vs-multiple-enemies-or-split-half-defense-half-attack-vs-one-enemy-otherwise-keep-half-for-economy-defense-and-multi-target-attack-logic',
+    version: '2.1',
   });
 });
 
