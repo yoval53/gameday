@@ -1,37 +1,12 @@
-const http = require('http');
+const express = require('express');
 
 const HOST = process.env.HOST || '0.0.0.0';
 const PORT = Number(process.env.PORT || 3000);
 
+const app = express();
+
 function logRequest() {
   console.log('[KW-BOT] Mega ogudor');
-}
-
-function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(payload));
-}
-
-function parseBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', (chunk) => {
-      data += chunk;
-      if (data.length > 1_000_000) {
-        reject(new Error('Payload too large'));
-        req.destroy();
-      }
-    });
-    req.on('end', () => {
-      if (!data) return resolve({});
-      try {
-        resolve(JSON.parse(data));
-      } catch (err) {
-        reject(new Error('Invalid JSON'));
-      }
-    });
-    req.on('error', reject);
-  });
 }
 
 function costToUpgrade(level) {
@@ -115,44 +90,44 @@ function chooseCombat(payload) {
   return actions;
 }
 
-const server = http.createServer(async (req, res) => {
+app.use(express.json({ limit: '1mb' }));
+app.use((req, _res, next) => {
   logRequest();
-
-  const { method, url } = req;
-
-  if (method === 'GET' && url === '/healthz') {
-    return sendJson(res, 200, { status: 'OK' });
-  }
-
-  if (method === 'GET' && url === '/info') {
-    return sendJson(res, 200, {
-      name: 'Mega Ogudor JS Bot',
-      strategy: 'AI-trapped-strategy',
-      version: '1.0',
-    });
-  }
-
-  if (method === 'POST' && url === '/negotiate') {
-    try {
-      const payload = await parseBody(req);
-      return sendJson(res, 200, chooseNegotiation(payload));
-    } catch {
-      return sendJson(res, 400, []);
-    }
-  }
-
-  if (method === 'POST' && url === '/combat') {
-    try {
-      const payload = await parseBody(req);
-      return sendJson(res, 200, chooseCombat(payload));
-    } catch {
-      return sendJson(res, 400, []);
-    }
-  }
-
-  return sendJson(res, 404, { error: 'Not found' });
+  next();
 });
 
-server.listen(PORT, HOST, () => {
+app.get('/healthz', (_req, res) => {
+  res.status(200).json({ status: 'OK' });
+});
+
+app.get('/info', (_req, res) => {
+  res.status(200).json({
+    name: 'Mega Ogudor JS Bot',
+    strategy: 'AI-trapped-strategy',
+    version: '1.0',
+  });
+});
+
+app.post('/negotiate', (req, res) => {
+  res.status(200).json(chooseNegotiation(req.body || {}));
+});
+
+app.post('/combat', (req, res) => {
+  res.status(200).json(chooseCombat(req.body || {}));
+});
+
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+app.use((err, _req, res, _next) => {
+  if (err?.type === 'entity.parse.failed' || err?.type === 'entity.too.large') {
+    return res.status(400).json([]);
+  }
+
+  return res.status(500).json({ error: 'Internal server error' });
+});
+
+app.listen(PORT, HOST, () => {
   console.log(`Kingdom Wars bot listening on ${HOST}:${PORT}`);
 });
