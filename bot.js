@@ -38,10 +38,14 @@ function chooseCombat(payload) {
 
   // Phase 1: Peace always, defend, and save for tower level 2.
   if (myLevel < 2) {
-    const attackers = (payload.previousAttacks || [])
-      .filter((attack) => attack?.action?.targetId === me.playerId).length;
+    const declaredAttackers = new Set(
+      (payload.previousAttacks || [])
+        .filter((attack) => attack?.action?.targetId === me.playerId)
+        .map((attack) => attack?.playerId || attack?.attackerId || attack?.action?.playerId)
+        .filter(Boolean),
+    );
 
-    const defendAmount = attackers > 2 ? 10 : 5;
+    const defendAmount = declaredAttackers.size * 8;
     const armorAmount = Math.min(resources, defendAmount);
 
     if (armorAmount > 0) {
