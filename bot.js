@@ -128,6 +128,10 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`Kingdom Wars bot listening on ${HOST}:${PORT}`);
-});
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(PORT, HOST, () => {
+    console.log(`Kingdom Wars bot listening on ${HOST}:${PORT}`);
+  });
+}
