@@ -14,77 +14,64 @@ function costToUpgrade(level) {
 }
 
 function chooseNegotiation(payload) {
-  const me = payload.playerTower;
   const enemies = Array.isArray(payload.enemyTowers) ? payload.enemyTowers : [];
 
-  if (!me || enemies.length === 0) {
+  if (enemies.length === 0) {
     return [];
   }
 
-  const strongestEnemy = [...enemies].sort((a, b) => (b.level * 100 + b.hp + b.armor) - (a.level * 100 + a.hp + a.armor))[0];
-  const weakestEnemy = [...enemies].sort((a, b) => (a.hp + a.armor) - (b.hp + b.armor))[0];
-
-  if (!strongestEnemy || !weakestEnemy) {
-    return [];
-  }
-
-  if (strongestEnemy.playerId === weakestEnemy.playerId) {
-    return [{ allyId: strongestEnemy.playerId }];
-  }
-
-  return [{ allyId: strongestEnemy.playerId, attackTargetId: weakestEnemy.playerId }];
+  // Always stay peaceful with all players in both phases.
+  return enemies.map((enemy) => ({ allyId: enemy.playerId }));
 }
 
 function chooseCombat(payload) {
   const me = payload.playerTower;
   const enemies = Array.isArray(payload.enemyTowers) ? payload.enemyTowers : [];
-  const actions = [];
 
   if (!me || enemies.length === 0) {
     return [];
   }
 
+  const actions = [];
   let resources = Number(me.resources) || 0;
-  const upgradeCost = costToUpgrade(me.level || 1);
-  const incomingDamage = (payload.previousAttacks || []).filter((a) => a?.action?.targetId === me.playerId)
-    .reduce((sum, a) => sum + (Number(a?.action?.troopCount) || 0), 0);
+  const myLevel = Number(me.level) || 1;
 
-  const armorNeeded = Math.max(0, incomingDamage - (Number(me.armor) || 0));
-  const armorSpend = Math.min(resources, Math.min(armorNeeded, Math.max(0, Math.floor(resources * 0.4))));
+  // Phase 1: Peace always, defend, and save for tower level 2.
+  if (myLevel < 2) {
+    const attackers = (payload.previousAttacks || [])
+      .filter((attack) => attack?.action?.targetId === me.playerId).length;
 
-  if (armorSpend > 0) {
-    actions.push({ type: 'armor', amount: armorSpend });
-    resources -= armorSpend;
-  }
+    const defendAmount = attackers > 2 ? 10 : 5;
+    const armorAmount = Math.min(resources, defendAmount);
 
-  if (resources >= upgradeCost && (me.level || 1) < 6) {
-    actions.push({ type: 'upgrade' });
-    resources -= upgradeCost;
-  }
+    if (armorAmount > 0) {
+      actions.push({ type: 'armor', amount: armorAmount });
+      resources -= armorAmount;
+    }
 
-  if (resources <= 0) {
+    const upgradeCost = costToUpgrade(myLevel);
+    if (resources >= upgradeCost) {
+      actions.push({ type: 'upgrade' });
+    }
+
     return actions;
   }
 
-  const sortedTargets = [...enemies].sort((a, b) => {
-    const aScore = (a.hp + a.armor) - (a.level * 5);
-    const bScore = (b.hp + b.armor) - (b.level * 5);
-    return aScore - bScore;
-  });
-
-  const primary = sortedTargets[0];
-  const secondary = sortedTargets[1];
-
-  if (!primary) {
+  // Phase 2: Keep saving while more than one opponent is still alive.
+  if (enemies.length > 1) {
     return actions;
   }
 
-  const primaryTroops = Math.max(1, Math.floor(resources * (secondary ? 0.7 : 1)));
-  actions.push({ type: 'attack', targetId: primary.playerId, troopCount: primaryTroops });
-  resources -= primaryTroops;
+  // One player left: attack only when our money is more than their life.
+  const lastEnemy = enemies[0];
+  const lastEnemyLife = (Number(lastEnemy.hp) || 0) + (Number(lastEnemy.armor) || 0);
 
-  if (secondary && resources > 0) {
-    actions.push({ type: 'attack', targetId: secondary.playerId, troopCount: resources });
+  if (resources > lastEnemyLife && resources > 0) {
+    actions.push({
+      type: 'attack',
+      targetId: lastEnemy.playerId,
+      troopCount: resources,
+    });
   }
 
   return actions;
@@ -103,8 +90,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'AI-trapped-strategy',
-    version: '1.0',
+    strategy: 'two-phase-peace-then-finish',
+    version: '1.1',
   });
 });
 
