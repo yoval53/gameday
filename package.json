@@ -1,0 +1,10 @@
+{
+  "name": "kingdom-wars-bot",
+  "version": "1.0.0",
+  "description": "Kingdom Wars JavaScript bot",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "license": "MIT"
+}
