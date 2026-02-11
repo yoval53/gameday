@@ -4,6 +4,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const PORT = Number(process.env.PORT || 3000);
 
 const app = express();
+const MAX_UPGRADE_COUNT = 2;
 
 function logRequest() {
   console.log('[KW-BOT] Mega ogudor');
@@ -11,6 +12,10 @@ function logRequest() {
 
 function costToUpgrade(level) {
   return Math.round(50 * (1.75 ** (level - 1)));
+}
+
+function canUpgradeTower(level) {
+  return (level - 1) < MAX_UPGRADE_COUNT;
 }
 
 function chooseNegotiation(payload) {
@@ -53,9 +58,9 @@ function chooseCombat(payload) {
     resources = 0;
   }
 
-  // Keep upgrading whenever we can afford the next level.
+  // Keep upgrading whenever we can afford the next level, up to two upgrades.
   const upgradeCost = costToUpgrade(myLevel);
-  if (resources >= upgradeCost) {
+  if (canUpgradeTower(myLevel) && resources >= upgradeCost) {
     actions.push({ type: 'upgrade' });
     resources -= upgradeCost;
   }
@@ -109,8 +114,8 @@ app.get('/healthz', (_req, res) => {
 app.get('/info', (_req, res) => {
   res.status(200).json({
     name: 'Mega Ogudor JS Bot',
-    strategy: 'invest-all-in-defense-when-total-enemy-income-exceeds-my-hp-plus-defense-upgrade-when-affordable-attack-at-1.1x-enemy-hp-plus-defense',
-    version: '1.8',
+    strategy: 'invest-all-in-defense-when-total-enemy-income-exceeds-my-hp-plus-defense-upgrade-when-affordable-up-to-two-times-attack-at-1.1x-enemy-hp-plus-defense',
+    version: '1.9',
   });
 });
 
